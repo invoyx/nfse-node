@@ -1,0 +1,19 @@
+name: Sugerir melhoria
+description: Um recurso, endpoint ou campo do leiaute que o SDK ainda não cobre.
+labels: ["enhancement"]
+body:
+  - type: textarea
+    id: contexto
+    attributes:
+      label: Contexto
+      description: O que você está tentando fazer, e o que falta no SDK pra isso funcionar.
+    validations:
+      required: true
+
+  - type: textarea
+    id: referencia
+    attributes:
+      label: Referência oficial
+      description: Trecho do XSD, da NT-008 ou do manual do contribuinte que sustenta o pedido, se houver.
+    validations:
+      required: false

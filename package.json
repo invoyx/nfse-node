@@ -1,0 +1,89 @@
+{
+  "name": "nfse-node",
+  "version": "0.1.0",
+  "description": "SDK não oficial em Node.js/TypeScript para a NFS-e Nacional (ADN/SEFIN Nacional)",
+  "license": "Apache-2.0",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/invoyx/nfse-node.git"
+  },
+  "bugs": {
+    "url": "https://github.com/invoyx/nfse-node/issues"
+  },
+  "homepage": "https://github.com/invoyx/nfse-node#readme",
+  "keywords": [
+    "nfse",
+    "nfs-e",
+    "nfs-e-nacional",
+    "nota-fiscal",
+    "nota-fiscal-servico",
+    "dps",
+    "danfse",
+    "sefin",
+    "sped",
+    "xml-dsig",
+    "mtls",
+    "typescript",
+    "brasil"
+  ],
+  "type": "module",
+  "main": "./dist/indice.js",
+  "types": "./dist/indice.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/indice.d.ts",
+      "import": "./dist/indice.js"
+    },
+    "./certificado": {
+      "types": "./dist/certificado/indice.d.ts",
+      "import": "./dist/certificado/indice.js"
+    },
+    "./assinatura": {
+      "types": "./dist/assinatura/indice.d.ts",
+      "import": "./dist/assinatura/indice.js"
+    },
+    "./dps": {
+      "types": "./dist/dps/indice.d.ts",
+      "import": "./dist/dps/indice.js"
+    },
+    "./cliente": {
+      "types": "./dist/cliente/indice.d.ts",
+      "import": "./dist/cliente/indice.js"
+    },
+    "./danfse": {
+      "types": "./dist/danfse/indice.d.ts",
+      "import": "./dist/danfse/indice.js"
+    }
+  },
+  "files": [
+    "dist",
+    "schemas/**/*.xsd",
+    "assets/fonts",
+    "LICENSE",
+    "NOTICE"
+  ],
+  "engines": {
+    "node": ">=20"
+  },
+  "scripts": {
+    "build": "tsc -p tsconfig.json",
+    "test": "tsx --test src/**/*.teste.ts",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@xmldom/xmldom": "^0.9.11",
+    "node-forge": "^1.3.1",
+    "pdfkit": "^0.19.1",
+    "qrcode": "^1.5.4",
+    "xml-crypto": "^6.1.2"
+  },
+  "devDependencies": {
+    "@types/node": "^22.10.2",
+    "@types/node-forge": "^1.3.11",
+    "@types/pdfkit": "^0.17.6",
+    "@types/qrcode": "^1.5.6",
+    "libxmljs2": "^0.37.0",
+    "tsx": "^4.19.2",
+    "typescript": "^5.7.2"
+  }
+}

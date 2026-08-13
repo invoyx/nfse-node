@@ -1,0 +1,33 @@
+name: CodeQL
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+  schedule:
+    - cron: '0 6 * * 1' # toda segunda, 06:00 UTC
+
+permissions:
+  contents: read
+  security-events: write
+
+jobs:
+  analisar:
+    name: Analisar (${{ matrix.language }})
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        language: ['javascript-typescript']
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Inicializar CodeQL
+        uses: github/codeql-action/init@v3
+        with:
+          languages: ${{ matrix.language }}
+
+      - name: Analisar
+        uses: github/codeql-action/analyze@v3
