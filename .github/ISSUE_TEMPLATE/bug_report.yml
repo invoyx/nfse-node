@@ -1,0 +1,44 @@
+name: Reportar um bug
+description: Algo no SDK não está se comportando conforme a especificação oficial (XSD, NT-008, contrato da API).
+labels: ["bug"]
+body:
+  - type: textarea
+    id: descricao
+    attributes:
+      label: O que aconteceu
+      description: Descreva o comportamento observado e o que era esperado.
+    validations:
+      required: true
+
+  - type: textarea
+    id: reproducao
+    attributes:
+      label: Como reproduzir
+      description: Trecho de código, XML de entrada (anonimizado - nunca cole certificado, senha ou dado real de contribuinte) ou passo a passo.
+      render: typescript
+    validations:
+      required: true
+
+  - type: input
+    id: modulo
+    attributes:
+      label: Módulo afetado
+      placeholder: "certificado, assinatura, dps, cliente ou danfse"
+    validations:
+      required: true
+
+  - type: input
+    id: versao
+    attributes:
+      label: Versão do nfse-node
+      placeholder: "ex.: 0.1.0"
+    validations:
+      required: true
+
+  - type: input
+    id: node
+    attributes:
+      label: Versão do Node.js
+      placeholder: "ex.: 22.10.0"
+    validations:
+      required: true

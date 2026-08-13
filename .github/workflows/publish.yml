@@ -1,0 +1,84 @@
+name: Publicar no npm
+
+on:
+  release:
+    types: [published]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  id-token: write # necessário para OIDC (Trusted Publisher) e para a proveniência do pacote
+
+concurrency:
+  group: publicar-npm
+  cancel-in-progress: false
+
+jobs:
+  publicar:
+    name: Publicar pacote
+    runs-on: ubuntu-latest
+    # Ambiente do GitHub configurado manualmente no repositório (Settings >
+    # Environments), para permitir exigir aprovação manual antes de publicar.
+    environment: npm-producao
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Configurar Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          registry-url: https://registry.npmjs.org
+
+      # Trusted Publishing (OIDC) exige uma versão recente do npm CLI, mais
+      # recente do que a que costuma vir empacotada com o Node.
+      - name: Atualizar npm
+        run: npm install -g npm@latest
+
+      - name: Instalar dependências
+        run: npm ci
+
+      - name: Checar tipos
+        run: npm run typecheck
+
+      - name: Rodar testes
+        run: npm test
+
+      - name: Build
+        run: npm run build
+
+      - name: Conferir o que seria publicado
+        run: npm pack --dry-run
+
+      - name: Conferir se a tag da release bate com a versão do package.json
+        env:
+          TAG: ${{ github.event.release.tag_name }}
+        run: |
+          VERSAO="$(node -p 'require("./package.json").version')"
+          if [ "$TAG" != "v$VERSAO" ] && [ "$TAG" != "$VERSAO" ]; then
+            echo "A tag da release ($TAG) não bate com a versão do package.json ($VERSAO)."
+            echo "Corrija a tag ou publique uma nova versão em package.json antes de criar a release."
+            exit 1
+          fi
+
+      - name: Conferir se essa versão já foi publicada
+        id: npm
+        run: |
+          NOME="$(node -p 'require("./package.json").name')"
+          VERSAO="$(node -p 'require("./package.json").version')"
+          if npm view "$NOME@$VERSAO" version >/dev/null 2>&1; then
+            echo "ja_publicada=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "ja_publicada=false" >> "$GITHUB_OUTPUT"
+          fi
+
+      # Sem NPM_TOKEN: autenticação via OIDC (npm Trusted Publisher), que
+      # precisa ser configurado uma vez em npmjs.com apontando pra este
+      # repositório e workflow - ver README/CONTRIBUTING para o passo a passo.
+      - name: Publicar
+        if: steps.npm.outputs.ja_publicada == 'false'
+        run: npm publish --access public --provenance
+
+      - name: Pular (versão já publicada)
+        if: steps.npm.outputs.ja_publicada == 'true'
+        run: echo "Essa versão já está publicada no npm - nada a fazer."
