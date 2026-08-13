@@ -51,6 +51,9 @@ jobs:
         run: npm pack --dry-run
 
       - name: Conferir se a tag da release bate com a versão do package.json
+        # So se aplica quando o gatilho e uma release de verdade - via
+        # workflow_dispatch nao existe tag pra comparar.
+        if: github.event_name == 'release'
         env:
           TAG: ${{ github.event.release.tag_name }}
         run: |
