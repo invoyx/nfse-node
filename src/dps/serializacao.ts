@@ -4,10 +4,16 @@ import { gerarIdDps } from './identificador.js';
 import type {
   DadosDps,
   DestinatarioIbscbs,
+  DiferimentoIbscbs,
   Endereco,
+  EnderecoImovel,
+  ImovelIbscbs,
+  InfoIbscbs,
   Pessoa,
   Prestador,
   Servico,
+  SituacaoTributariaIbscbs,
+  TributacaoRegularIbscbs,
   Valores,
 } from './tipos.js';
 
@@ -30,12 +36,6 @@ export function montarXmlDps(dados: DadosDps): DpsMontada {
   if (!documentoEmitente) {
     throw new ErroValidacaoDps('prest.CNPJ ou prest.CPF é obrigatório para gerar o Id da DPS.');
   }
-  if (dados.IBSCBS) {
-    throw new ErroValidacaoDps(
-      'Serialização do bloco IBSCBS ainda não implementada nesta versão do SDK (o detalhamento de cálculo por classificação tributária exigido pelo XSD ainda não está coberto).'
-    );
-  }
-
   const id = gerarIdDps({
     documentoEmitente,
     codigoMunicipioEmissor: dados.cLocEmi,
@@ -57,6 +57,7 @@ export function montarXmlDps(dados: DadosDps): DpsMontada {
     dados.interm ? xmlPessoa('interm', dados.interm) : '',
     xmlServico(dados.serv),
     xmlValores(dados.valores),
+    dados.IBSCBS ? xmlIbscbs(dados.IBSCBS) : '',
   ].join('');
 
   const xml =
@@ -160,6 +161,92 @@ function xmlValores(valores: Valores): string {
     vDescCondIncond +
     `<trib>${xmlTribMun}${xmlTribFed}<totTrib>${xmlTotTrib}</totTrib></trib>` +
     `</valores>`
+  );
+}
+
+function xmlIdentificacaoDest(dest: DestinatarioIbscbs): string {
+  if (dest.CNPJ) return tag('CNPJ', dest.CNPJ);
+  if (dest.CPF) return tag('CPF', dest.CPF);
+  if (dest.NIF) return tag('NIF', dest.NIF);
+  if (dest.cNaoNIF) return tag('cNaoNIF', dest.cNaoNIF);
+  throw new ErroValidacaoDps('IBSCBS.dest precisa informar CNPJ, CPF, NIF ou cNaoNIF.');
+}
+
+function xmlDest(dest: DestinatarioIbscbs): string {
+  return (
+    `<dest>` +
+    xmlIdentificacaoDest(dest) +
+    tag('xNome', dest.xNome) +
+    (dest.end ? `<end>${xmlEndereco(dest.end)}</end>` : '') +
+    tag('fone', dest.fone) +
+    tag('email', dest.email) +
+    `</dest>`
+  );
+}
+
+function xmlEnderecoImovel(end: EnderecoImovel): string {
+  const escolha = end.CEP
+    ? tag('CEP', end.CEP)
+    : end.endExt
+      ? `<endExt>${tag('cEndPost', end.endExt.cEndPost)}${tag('xCidade', end.endExt.xCidade)}${tag('xEstProvReg', end.endExt.xEstProvReg)}</endExt>`
+      : '';
+  if (!escolha) {
+    throw new ErroValidacaoDps('IBSCBS.imovel.end precisa informar CEP ou endExt.');
+  }
+  return (
+    escolha + tag('xLgr', end.xLgr) + tag('nro', end.nro) + tag('xCpl', end.xCpl) + tag('xBairro', end.xBairro)
+  );
+}
+
+function xmlImovel(imovel: ImovelIbscbs): string {
+  const inscImobFisc = tag('inscImobFisc', imovel.inscImobFisc);
+  if (imovel.cCIB) {
+    return `<imovel>${inscImobFisc}${tag('cCIB', imovel.cCIB)}</imovel>`;
+  }
+  if (imovel.end) {
+    return `<imovel>${inscImobFisc}<end>${xmlEnderecoImovel(imovel.end)}</end></imovel>`;
+  }
+  throw new ErroValidacaoDps('IBSCBS.imovel precisa informar cCIB ou end.');
+}
+
+function xmlTributacaoRegularIbscbs(reg: TributacaoRegularIbscbs): string {
+  return `<gTribRegular>${tag('CSTReg', reg.CSTReg)}${tag('cClassTribReg', reg.cClassTribReg)}</gTribRegular>`;
+}
+
+function xmlDiferimentoIbscbs(dif: DiferimentoIbscbs): string {
+  return `<gDif>${tagNum('pDifUF', dif.pDifUF)}${tagNum('pDifMun', dif.pDifMun)}${tagNum('pDifCBS', dif.pDifCBS)}</gDif>`;
+}
+
+function xmlSituacaoTributariaIbscbs(sit: SituacaoTributariaIbscbs): string {
+  return (
+    `<gIBSCBS>` +
+    tag('CST', sit.CST) +
+    tag('cClassTrib', sit.cClassTrib) +
+    tag('cCredPres', sit.cCredPres) +
+    (sit.gTribRegular ? xmlTributacaoRegularIbscbs(sit.gTribRegular) : '') +
+    (sit.gDif ? xmlDiferimentoIbscbs(sit.gDif) : '') +
+    `</gIBSCBS>`
+  );
+}
+
+function xmlRefNFSe(refs: string[]): string {
+  return `<gRefNFSe>${refs.map((ref) => tag('refNFSe', ref)).join('')}</gRefNFSe>`;
+}
+
+function xmlIbscbs(ibscbs: InfoIbscbs): string {
+  return (
+    `<IBSCBS>` +
+    tag('finNFSe', ibscbs.finNFSe) +
+    tag('indFinal', ibscbs.indFinal) +
+    tag('cIndOp', ibscbs.cIndOp) +
+    tag('tpOper', ibscbs.tpOper) +
+    (ibscbs.refNFSe && ibscbs.refNFSe.length > 0 ? xmlRefNFSe(ibscbs.refNFSe) : '') +
+    tag('tpEnteGov', ibscbs.tpEnteGov) +
+    tag('indDest', ibscbs.indDest) +
+    (ibscbs.dest ? xmlDest(ibscbs.dest) : '') +
+    (ibscbs.imovel ? xmlImovel(ibscbs.imovel) : '') +
+    `<valores><trib>${xmlSituacaoTributariaIbscbs(ibscbs.valores.trib.gIBSCBS)}</trib></valores>` +
+    `</IBSCBS>`
   );
 }
 
