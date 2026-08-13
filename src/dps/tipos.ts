@@ -4,9 +4,10 @@
 //
 // Cobertura desta primeira versao: prestador, tomador/intermediario, servico
 // (sem obra, evento, comercio exterior ou dedução por documentos), valores,
-// tributacao municipal e federal, e o bloco IBSCBS no nivel de identificacao
-// do destinatario e finalidade - o detalhamento de calculo por classificacao
-// tributaria (IBSCBS/valores/trib/gIBSCBS) ainda nao esta tipado.
+// tributacao municipal e federal, e o bloco IBSCBS declarado pelo emitente
+// (TCRTCInfoIBSCBS: finalidade, destinatario, imovel, situacao/classificacao
+// tributaria, tributacao regular e diferimento). O grupo gReeRepRes (valores
+// de reembolso/repasse/ressarcimento de terceiros) ainda nao esta tipado.
 
 export type TipoAmbiente = '1' | '2';
 export type TipoEmitenteDps = '1' | '2' | '3';
@@ -122,23 +123,95 @@ export interface Valores {
   trib: Tributacao;
 }
 
-export interface DestinatarioIbscbs extends DocumentoFiscal {
+export type MotivoNaoInformacaoNif = '0' | '1' | '2';
+
+export interface IdentificacaoDestinatarioIbscbs {
+  CNPJ?: string;
+  CPF?: string;
+  /** Número de Identificação Fiscal emitido por administração tributária no exterior. */
+  NIF?: string;
+  cNaoNIF?: MotivoNaoInformacaoNif;
+}
+
+export interface DestinatarioIbscbs extends IdentificacaoDestinatarioIbscbs {
   xNome: string;
   end?: Endereco;
   fone?: string;
   email?: string;
 }
 
-/**
- * Bloco IBSCBS da DPS (reforma tributária). O detalhamento de cálculo por
- * classificação tributária (valores/trib/gIBSCBS do XSD) ainda não está
- * coberto - fica como próximo incremento.
- */
+export interface EnderecoExteriorSimples {
+  cEndPost: string;
+  xCidade: string;
+  xEstProvReg: string;
+}
+
+/** Endereço do imóvel (TCEnderObraEvento): exige CEP (nacional) ou endExt (exterior). */
+export interface EnderecoImovel {
+  CEP?: string;
+  endExt?: EnderecoExteriorSimples;
+  xLgr: string;
+  nro: string;
+  xCpl?: string;
+  xBairro: string;
+}
+
+/** Grupo de bens imóveis do IBSCBS: exige cCIB (Cadastro Imobiliário Brasileiro) ou end. */
+export interface ImovelIbscbs {
+  inscImobFisc?: string;
+  cCIB?: string;
+  end?: EnderecoImovel;
+}
+
+export interface TributacaoRegularIbscbs {
+  /** Código de Situação Tributária (CST) aplicável na tributação regular. */
+  CSTReg: string;
+  /** Código de Classificação Tributária aplicável na tributação regular. */
+  cClassTribReg: string;
+}
+
+export interface DiferimentoIbscbs {
+  pDifUF: number;
+  pDifMun: number;
+  pDifCBS: number;
+}
+
+export interface SituacaoTributariaIbscbs {
+  /** Código de Situação Tributária (CST) do IBS e da CBS. */
+  CST: string;
+  cClassTrib: string;
+  /** Código e classificação do crédito presumido (2 dígitos), quando aplicável. */
+  cCredPres?: string;
+  gTribRegular?: TributacaoRegularIbscbs;
+  gDif?: DiferimentoIbscbs;
+}
+
+export interface ValoresIbscbs {
+  trib: {
+    gIBSCBS: SituacaoTributariaIbscbs;
+  };
+}
+
+export type FinalidadeNFSe = '0';
+export type IndicadorConsumoPessoal = '0' | '1';
+export type TipoOperacaoEnteGovernamental = '1' | '2' | '3' | '4' | '5';
+export type TipoEnteGovernamental = '1' | '2' | '3' | '4';
+export type IndicadorDestinatario = '0' | '1';
+
+/** Bloco IBSCBS declarado pelo emitente da DPS (TCRTCInfoIBSCBS). */
 export interface InfoIbscbs {
-  finNFSe: string;
+  finNFSe: FinalidadeNFSe;
+  indFinal?: IndicadorConsumoPessoal;
+  /** Código indicador da operação de fornecimento (6 dígitos), conforme tabela oficial. */
   cIndOp: string;
-  indDest: string;
+  tpOper?: TipoOperacaoEnteGovernamental;
+  /** Chaves das NFS-e referenciadas (gRefNFSe), até 99 ocorrências. */
+  refNFSe?: string[];
+  tpEnteGov?: TipoEnteGovernamental;
+  indDest: IndicadorDestinatario;
   dest?: DestinatarioIbscbs;
+  imovel?: ImovelIbscbs;
+  valores: ValoresIbscbs;
 }
 
 export interface DadosDps {

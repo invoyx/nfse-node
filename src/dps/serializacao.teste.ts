@@ -95,8 +95,62 @@ test('rejeita quando prest nao informa CNPJ nem CPF', () => {
   assert.throws(() => montarXmlDps(dados), ErroValidacaoDps);
 });
 
-test('rejeita IBSCBS por enquanto (serializacao ainda nao implementada)', () => {
+test('monta um XML de DPS com bloco IBSCBS valido contra o XSD oficial', () => {
+  const xsd = prepararXsdParaValidacao();
   const dados = dadosDpsExemplo();
-  dados.IBSCBS = { finNFSe: '1', cIndOp: '1', indDest: '1' };
+  dados.IBSCBS = {
+    finNFSe: '0',
+    indFinal: '0',
+    cIndOp: '000001',
+    tpOper: '5',
+    refNFSe: ['35202511222222000199550010000000011234567890123456'.slice(0, 50)],
+    tpEnteGov: '4',
+    indDest: '1',
+    dest: {
+      CNPJ: '98765432000155',
+      xNome: 'Destinatario Exemplo',
+    },
+    imovel: { cCIB: 'AB123456' },
+    valores: {
+      trib: {
+        gIBSCBS: {
+          CST: '000',
+          cClassTrib: '000001',
+          cCredPres: '01',
+          gTribRegular: { CSTReg: '000', cClassTribReg: '000001' },
+          gDif: { pDifUF: 0, pDifMun: 0, pDifCBS: 0 },
+        },
+      },
+    },
+  };
+
+  const { xml } = montarXmlDps(dados);
+  const doc = libxmljs.parseXml(xml);
+  const valido = doc.validate(xsd);
+  assert.ok(valido, `XML nao passou no XSD oficial: ${doc.validationErrors.join('; ')}`);
+});
+
+test('rejeita IBSCBS.dest sem CNPJ, CPF, NIF ou cNaoNIF', () => {
+  const dados = dadosDpsExemplo();
+  dados.IBSCBS = {
+    finNFSe: '0',
+    cIndOp: '000001',
+    indDest: '1',
+    // @ts-expect-error -- teste propositalmente nao informa nenhuma identificacao
+    dest: { xNome: 'Destinatario Exemplo' },
+    valores: { trib: { gIBSCBS: { CST: '000', cClassTrib: '000001' } } },
+  };
+  assert.throws(() => montarXmlDps(dados), ErroValidacaoDps);
+});
+
+test('rejeita IBSCBS.imovel sem cCIB nem end', () => {
+  const dados = dadosDpsExemplo();
+  dados.IBSCBS = {
+    finNFSe: '0',
+    cIndOp: '000001',
+    indDest: '0',
+    imovel: {},
+    valores: { trib: { gIBSCBS: { CST: '000', cClassTrib: '000001' } } },
+  };
   assert.throws(() => montarXmlDps(dados), ErroValidacaoDps);
 });
