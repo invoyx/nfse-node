@@ -47,7 +47,9 @@ O restante do SDK (certificado, assinatura, cliente HTTP) existe porque é pré-
 
 ## Instalação
 
-Ainda não publicado no npm.
+```
+npm install nfse-node
+```
 
 ## Licença
 
