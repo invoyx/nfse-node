@@ -5,8 +5,11 @@ import type {
   DadosDps,
   DestinatarioIbscbs,
   DiferimentoIbscbs,
+  DocumentoReeRepRes,
   Endereco,
   EnderecoImovel,
+  FornecedorReeRepRes,
+  IdentificacaoDestinatarioIbscbs,
   ImovelIbscbs,
   InfoIbscbs,
   Pessoa,
@@ -164,18 +167,18 @@ function xmlValores(valores: Valores): string {
   );
 }
 
-function xmlIdentificacaoDest(dest: DestinatarioIbscbs): string {
+function xmlIdentificacaoDest(dest: IdentificacaoDestinatarioIbscbs, contexto: string): string {
   if (dest.CNPJ) return tag('CNPJ', dest.CNPJ);
   if (dest.CPF) return tag('CPF', dest.CPF);
   if (dest.NIF) return tag('NIF', dest.NIF);
   if (dest.cNaoNIF) return tag('cNaoNIF', dest.cNaoNIF);
-  throw new ErroValidacaoDps('IBSCBS.dest precisa informar CNPJ, CPF, NIF ou cNaoNIF.');
+  throw new ErroValidacaoDps(`${contexto} precisa informar CNPJ, CPF, NIF ou cNaoNIF.`);
 }
 
 function xmlDest(dest: DestinatarioIbscbs): string {
   return (
     `<dest>` +
-    xmlIdentificacaoDest(dest) +
+    xmlIdentificacaoDest(dest, 'IBSCBS.dest') +
     tag('xNome', dest.xNome) +
     (dest.end ? `<end>${xmlEndereco(dest.end)}</end>` : '') +
     tag('fone', dest.fone) +
@@ -233,7 +236,52 @@ function xmlRefNFSe(refs: string[]): string {
   return `<gRefNFSe>${refs.map((ref) => tag('refNFSe', ref)).join('')}</gRefNFSe>`;
 }
 
+function xmlDocumentoReferenciadoReeRepRes(doc: DocumentoReeRepRes): string {
+  if (doc.dFeNacional) {
+    const d = doc.dFeNacional;
+    return `<dFeNacional>${tag('tipoChaveDFe', d.tipoChaveDFe)}${tag('xTipoChaveDFe', d.xTipoChaveDFe)}${tag('chaveDFe', d.chaveDFe)}</dFeNacional>`;
+  }
+  if (doc.docFiscalOutro) {
+    const d = doc.docFiscalOutro;
+    return `<docFiscalOutro>${tag('cMunDocFiscal', d.cMunDocFiscal)}${tag('nDocFiscal', d.nDocFiscal)}${tag('xDocFiscal', d.xDocFiscal)}</docFiscalOutro>`;
+  }
+  if (doc.docOutro) {
+    const d = doc.docOutro;
+    return `<docOutro>${tag('nDoc', d.nDoc)}${tag('xDoc', d.xDoc)}</docOutro>`;
+  }
+  throw new ErroValidacaoDps(
+    'IBSCBS.valores.gReeRepRes: cada documento precisa informar dFeNacional, docFiscalOutro ou docOutro.'
+  );
+}
+
+function xmlFornecedorReeRepRes(fornec: FornecedorReeRepRes): string {
+  return `<fornec>${xmlIdentificacaoDest(fornec, 'IBSCBS.valores.gReeRepRes.fornec')}${tag('xNome', fornec.xNome)}</fornec>`;
+}
+
+function xmlDocumentoReeRepRes(doc: DocumentoReeRepRes): string {
+  return (
+    `<documentos>` +
+    xmlDocumentoReferenciadoReeRepRes(doc) +
+    (doc.fornec ? xmlFornecedorReeRepRes(doc.fornec) : '') +
+    tag('dtEmiDoc', formatarData(doc.dtEmiDoc)) +
+    tag('dtCompDoc', formatarData(doc.dtCompDoc)) +
+    tag('tpReeRepRes', doc.tpReeRepRes) +
+    tag('xTpReeRepRes', doc.xTpReeRepRes) +
+    tagNum('vlrReeRepRes', doc.vlrReeRepRes) +
+    `</documentos>`
+  );
+}
+
+function xmlGReeRepRes(documentos: DocumentoReeRepRes[]): string {
+  return `<gReeRepRes>${documentos.map(xmlDocumentoReeRepRes).join('')}</gReeRepRes>`;
+}
+
 function xmlIbscbs(ibscbs: InfoIbscbs): string {
+  const gReeRepRes =
+    ibscbs.valores.gReeRepRes && ibscbs.valores.gReeRepRes.length > 0
+      ? xmlGReeRepRes(ibscbs.valores.gReeRepRes)
+      : '';
+
   return (
     `<IBSCBS>` +
     tag('finNFSe', ibscbs.finNFSe) +
@@ -245,7 +293,7 @@ function xmlIbscbs(ibscbs: InfoIbscbs): string {
     tag('indDest', ibscbs.indDest) +
     (ibscbs.dest ? xmlDest(ibscbs.dest) : '') +
     (ibscbs.imovel ? xmlImovel(ibscbs.imovel) : '') +
-    `<valores><trib>${xmlSituacaoTributariaIbscbs(ibscbs.valores.trib.gIBSCBS)}</trib></valores>` +
+    `<valores>${gReeRepRes}<trib>${xmlSituacaoTributariaIbscbs(ibscbs.valores.trib.gIBSCBS)}</trib></valores>` +
     `</IBSCBS>`
   );
 }
