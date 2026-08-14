@@ -62,8 +62,13 @@ export interface ClienteSefin {
   consultarDps(idDps: string): Promise<RespostaSefin>;
   /** POST /nfse/{chave}/eventos - registra um evento (ex.: cancelamento) já assinado. */
   registrarEvento(chaveAcesso: string, pedRegXmlAssinado: string): Promise<RespostaSefin>;
-  /** GET /nfse/{chave}/eventos - lista os eventos registrados para a NFS-e. */
-  listarEventos(chaveAcesso: string): Promise<RespostaSefin>;
+  /**
+   * GET /contribuintes/NFSe/{chave}/Eventos no ADN - lista os eventos (ex.:
+   * cancelamento, substituição) registrados para a chave de acesso. Não
+   * confundir com `registrarEvento`: aquele é POST no SEFIN Nacional (só
+   * aceita escrita, devolve 405 em GET); este é leitura, e vive no ADN.
+   */
+  listarEventos(chaveAcesso: string): Promise<LoteDistribuicaoNsu>;
   /**
    * GET /contribuintes/DFe/{nsu} no ADN - baixa o próximo lote de documentos
    * fiscais (até 50) a partir do NSU informado. Use `0` para sincronizar
@@ -185,8 +190,9 @@ export function criarClienteSefin(opcoes: OpcoesClienteSefin): ClienteSefin {
       });
     },
 
-    listarEventos(chaveAcesso) {
-      return requisitar('GET', urlBase, `nfse/${chaveAcesso}/eventos`);
+    async listarEventos(chaveAcesso) {
+      const { corpo } = await requisitar('GET', urlAdn, `contribuintes/NFSe/${chaveAcesso}/Eventos`);
+      return normalizarLoteDistribuicao(corpo);
     },
 
     async baixarDfe(nsu, opcoesConsulta) {
