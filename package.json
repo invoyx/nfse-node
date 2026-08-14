@@ -1,6 +1,6 @@
 {
   "name": "nfse-node",
-  "version": "0.3.0",
+  "version": "0.3.1",
   "description": "SDK não oficial em Node.js/TypeScript para a NFS-e Nacional (ADN/SEFIN Nacional)",
   "license": "Apache-2.0",
   "repository": {
