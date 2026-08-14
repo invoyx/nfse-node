@@ -161,3 +161,12 @@ test('resolverMunicipio customizado e usado quando informado', async () => {
   });
   assert.equal(contarPaginas(pdf), 1);
 });
+
+test('canhoto vem por padrao e pode ser desabilitado, mantendo uma unica pagina', async () => {
+  const dados = lerNfse(xmlNfse());
+  const comCanhoto = await desenharDanfse(dados);
+  const semCanhoto = await desenharDanfse(dados, { incluirCanhoto: false });
+  assert.equal(contarPaginas(comCanhoto), 1);
+  assert.equal(contarPaginas(semCanhoto), 1);
+  assert.notDeepEqual(comCanhoto, semCanhoto);
+});

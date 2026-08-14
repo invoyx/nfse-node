@@ -102,6 +102,30 @@ export interface TributacaoIbscbsLegivel {
   valorTotalApuradoCbs?: number;
 }
 
+export interface DocumentoDeducaoLegivel {
+  /** Identificação do documento referenciado (chave de NFS-e/NF-e, nota municipal antiga, NF/NFS ou número de documento fiscal/não fiscal). */
+  documento?: string;
+  tipoDeducao?: string;
+  /** Preenchido só quando tipoDeducao = "99" (Outras deduções). */
+  descricaoOutraDeducao?: string;
+  dataEmissaoDocumento?: Date;
+  valorDedutivelRedutivel?: number;
+  valorDeducaoReducao?: number;
+  fornecedor?: PessoaLegivel;
+}
+
+/**
+ * Dedução/redução da base de cálculo declarada na DPS (vDedRed) - escolha
+ * entre percentual padrão, valor padrão ou lista de documentos. Distinto do
+ * total já calculado pelo SEFIN Nacional (`tributacaoMunicipal.totalDeducoesReducoes`),
+ * que é o único valor impresso no DANFSe conforme a NT 008/2026.
+ */
+export interface DeducaoReducaoLegivel {
+  percentual?: number;
+  valor?: number;
+  documentos?: DocumentoDeducaoLegivel[];
+}
+
 export interface ValorTotalLegivel {
   valorServico: number;
   descontoIncondicionado?: number;
@@ -163,5 +187,7 @@ export interface NfseLegivel {
   /** Ausente em NFS-e emitidas antes da vigência do IBSCBS. */
   tributacaoIbscbs?: TributacaoIbscbsLegivel;
   valorTotal: ValorTotalLegivel;
+  /** Ausente quando a DPS não declarou dedução/redução da base de cálculo (vDedRed). */
+  deducaoReducao?: DeducaoReducaoLegivel;
   informacoesComplementares: InformacoesComplementaresLegivel;
 }
