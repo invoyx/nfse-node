@@ -15,6 +15,7 @@ function xmlNfseBase(opcoes: {
   regEspTrib?: string;
   tribMunExtra?: string;
   vDescIncond?: string;
+  vDedRedXml?: string;
 } = {}): string {
   const ibscbsDeclarado = opcoes.indDest
     ? `<IBSCBS>
@@ -75,6 +76,7 @@ function xmlNfseBase(opcoes: {
         <valores>
           <vServPrest><vServ>1500.00</vServ></vServPrest>
           ${opcoes.vDescIncond ? `<vDescCondIncond><vDescIncond>${opcoes.vDescIncond}</vDescIncond></vDescCondIncond>` : ''}
+          ${opcoes.vDedRedXml ? `<vDedRed>${opcoes.vDedRedXml}</vDedRed>` : ''}
           <trib>
             <tribMun><tribISSQN>1</tribISSQN>${opcoes.tribMunExtra ?? ''}<tpRetISSQN>1</tpRetISSQN></tribMun>
             ${
@@ -172,4 +174,37 @@ test('le o desconto incondicionado do bloco de tributacao municipal', () => {
 test('le o percentual/valor declarados do beneficio municipal (BM/pRedBCBM e BM/vRedBCBM)', () => {
   const dados = lerNfse(xmlNfseBase({ tribMunExtra: '<BM><nBM>3550308010000000001</nBM><pRedBCBM>10.00</pRedBCBM></BM>' }));
   assert.equal(dados.tributacaoMunicipal?.beneficioMunicipalPercentualReducao, 10);
+});
+
+test('sem vDedRed: deducaoReducao fica ausente', () => {
+  const dados = lerNfse(xmlNfseBase());
+  assert.equal(dados.deducaoReducao, undefined);
+});
+
+test('le vDedRed com percentual padrao (pDR)', () => {
+  const dados = lerNfse(xmlNfseBase({ vDedRedXml: '<pDR>10.00</pDR>' }));
+  assert.equal(dados.deducaoReducao?.percentual, 10);
+});
+
+test('le vDedRed com lista de documentos, incluindo choice de referencia e fornecedor', () => {
+  const dados = lerNfse(
+    xmlNfseBase({
+      vDedRedXml: `<documentos><docDedRed>
+        <chNFSe>${'1'.repeat(50)}</chNFSe>
+        <tpDedRed>4</tpDedRed>
+        <dtEmiDoc>2026-05-10</dtEmiDoc>
+        <vDedutivelRedutivel>200.00</vDedutivelRedutivel>
+        <vDeducaoReducao>150.00</vDeducaoReducao>
+        <fornec><CNPJ>98765432000155</CNPJ><xNome>Fornecedor Exemplo</xNome></fornec>
+      </docDedRed></documentos>`,
+    })
+  );
+
+  const doc = dados.deducaoReducao?.documentos?.[0];
+  assert.equal(doc?.documento, '1'.repeat(50));
+  assert.equal(doc?.tipoDeducao, '4');
+  assert.equal(doc?.valorDedutivelRedutivel, 200);
+  assert.equal(doc?.valorDeducaoReducao, 150);
+  assert.equal(doc?.fornecedor?.nome, 'Fornecedor Exemplo');
+  assert.equal(doc?.dataEmissaoDocumento?.toISOString().slice(0, 10), '2026-05-10');
 });

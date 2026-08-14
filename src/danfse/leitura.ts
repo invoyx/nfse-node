@@ -1,8 +1,10 @@
 import { DOMParser, type Element } from '@xmldom/xmldom';
-import { atributo, filho, numero, texto, textos } from './dom.js';
+import { atributo, filho, filhos, numero, texto, textos } from './dom.js';
 import { ErroLeituraNfse } from './erros.js';
 import type {
+  DeducaoReducaoLegivel,
   DestinatarioIbscbsLegivel,
+  DocumentoDeducaoLegivel,
   EnderecoLegivel,
   InformacoesComplementaresLegivel,
   NfseLegivel,
@@ -78,6 +80,7 @@ export function lerNfse(xml: string): NfseLegivel {
     tributacaoFederal: lerTributacaoFederal(tribFed),
     tributacaoIbscbs: lerTributacaoIbscbs(ibscbsDps, ibscbsNfse),
     valorTotal: lerValorTotal(valoresDps, valoresNfse, ibscbsNfse),
+    deducaoReducao: lerDeducaoReducao(valoresDps),
     informacoesComplementares: lerInformacoesComplementares(infNFSe, infDPS, serv),
   };
 }
@@ -318,6 +321,57 @@ function lerValorTotal(
     valorLiquido: numero(valoresNfse, 'vLiq') ?? 0,
     totalIbsCbs,
     valorLiquidoComIbsCbs: numero(totCIBS, 'vTotNF'),
+  };
+}
+
+// A referencia ao documento dedutivel/redutivel e um xs:choice de 6 opcoes
+// (TCDocDedRed) - normalizamos pra uma unica string de exibicao, ja que nao
+// existe um bloco no DANFSe que precise dos campos separados.
+function lerDocumentoReferenciadoDedRed(doc: Element): string | undefined {
+  const chNFSe = texto(doc, 'chNFSe');
+  if (chNFSe) return chNFSe;
+  const chNFe = texto(doc, 'chNFe');
+  if (chNFe) return chNFe;
+
+  const nfseMun = filho(doc, 'NFSeMun');
+  if (nfseMun) {
+    return [texto(nfseMun, 'cMunNFSeMun'), texto(nfseMun, 'nNFSeMun'), texto(nfseMun, 'cVerifNFSeMun')]
+      .filter(Boolean)
+      .join('/');
+  }
+
+  const nfnfs = filho(doc, 'NFNFS');
+  if (nfnfs) {
+    return [texto(nfnfs, 'nNFS'), texto(nfnfs, 'modNFS'), texto(nfnfs, 'serieNFS')].filter(Boolean).join('/');
+  }
+
+  return texto(doc, 'nDocFisc') ?? texto(doc, 'nDoc');
+}
+
+function lerDocumentosDeducao(documentos: Element | undefined): DocumentoDeducaoLegivel[] {
+  return filhos(documentos, 'docDedRed').map((doc) => {
+    const dtEmiDoc = texto(doc, 'dtEmiDoc');
+    return {
+      documento: lerDocumentoReferenciadoDedRed(doc),
+      tipoDeducao: texto(doc, 'tpDedRed'),
+      descricaoOutraDeducao: texto(doc, 'xDescOutDed'),
+      dataEmissaoDocumento: dtEmiDoc ? new Date(dtEmiDoc) : undefined,
+      valorDedutivelRedutivel: numero(doc, 'vDedutivelRedutivel'),
+      valorDeducaoReducao: numero(doc, 'vDeducaoReducao'),
+      fornecedor: filho(doc, 'fornec') ? lerPessoa(filho(doc, 'fornec')) : undefined,
+    };
+  });
+}
+
+function lerDeducaoReducao(valoresDps: Element): DeducaoReducaoLegivel | undefined {
+  const vDedRed = filho(valoresDps, 'vDedRed');
+  if (!vDedRed) return undefined;
+
+  const documentosEl = filho(vDedRed, 'documentos');
+  return {
+    percentual: numero(vDedRed, 'pDR'),
+    valor: numero(vDedRed, 'vDR'),
+    documentos: documentosEl ? lerDocumentosDeducao(documentosEl) : undefined,
   };
 }
 

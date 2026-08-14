@@ -81,6 +81,12 @@ export interface OpcoesGerarDanfse {
   resolverMunicipio?: ResolvedorMunicipio;
   /** PNG/JPEG da logomarca oficial da NFS-e (item 2.4.3). Sem isso, o cabeçalho usa só texto. */
   logomarca?: Buffer;
+  /**
+   * Inclui o bloco de Canhoto (item 2.1.13, opcional). Quando `false`, o
+   * espaço é absorvido pelo bloco de Informações Complementares, conforme
+   * item 2.3.3. Padrão: `true`.
+   */
+  incluirCanhoto?: boolean;
 }
 
 /** Desenha o DANFSe em PDF a partir dos dados já lidos do XML da NFS-e (NT 008/2026). */
@@ -176,6 +182,18 @@ export async function desenharDanfse(dados: NfseLegivel, opcoes: OpcoesGerarDanf
     });
     documento.font('conteudo').fontSize(7).fillColor('#000');
     escrever(textoCabendo(valor || '-', largura - 1.6 * MM, 7, 'conteudo'), x + 0.8 * MM, y + 3.0 * MM, {
+      width: largura - 1.6 * MM,
+      lineBreak: false,
+    });
+  }
+  // Campo sem valor vindo do XML de proposito - "Data de Cientificação" e
+  // "Identificação e Assinatura" do Canhoto sao preenchidos a mao no papel
+  // impresso, entao nao levam o traco "-" usado pra campo sem dado (nota 12).
+  function campoBranco(coluna: number, extensao: number, y: number, rotulo: string): void {
+    const x = col(coluna);
+    const largura = extensao * colw;
+    documento.font('rotuloBold').fontSize(6).fillColor('#000');
+    escrever(textoCabendo(rotulo, largura - 1.6 * MM, 6, 'rotuloBold'), x + 0.8 * MM, y + 0.5 * MM, {
       width: largura - 1.6 * MM,
       lineBreak: false,
     });
@@ -496,10 +514,11 @@ export async function desenharDanfse(dados: NfseLegivel, opcoes: OpcoesGerarDanf
     return y;
   }
 
-  // ── Informações Complementares (absorve o resto da página, §2.1.12) ──
-  function desenharInformacoesComplementares(y: number): number {
+  // ── Informações Complementares (absorve o espaço restante da página,
+  // descontado o Canhoto quando incluído - §2.1.12, §2.3.3) ──
+  function desenharInformacoesComplementares(y: number, alturaReservada: number): number {
     const info = dados.informacoesComplementares;
-    const fim = margemSup + alturaUtil;
+    const fim = margemSup + alturaUtil - alturaReservada;
     y = faixaTitulo(y, 'INFORMAÇÕES COMPLEMENTARES');
 
     const segmentos: string[] = [];
@@ -542,6 +561,18 @@ export async function desenharDanfse(dados: NfseLegivel, opcoes: OpcoesGerarDanf
     return fim;
   }
 
+  // ── Canhoto (item 2.1.13, opcional) ──
+  function desenharCanhoto(y: number): number {
+    y = faixaTitulo(y, 'CANHOTO');
+    campoBranco(0, 2, y, 'Data de Cientificação');
+    campoBranco(2, 2, y, 'Identificação e Assinatura');
+    y += ALTURA_LINHA;
+    campo(0, 4, y, 'Nº NFS-e / Chave de Acesso da NFS-e', `${dados.numero} / ${dados.chaveAcesso}`);
+    y += ALTURA_LINHA;
+    linhaHorizontal(y);
+    return y;
+  }
+
   // ── Marca d'água (Cancelada/Substituída), §2.5 ──
   function desenharMarcaDagua(): void {
     const marca = opcoes.situacaoEspecial === 'Cancelada' ? 'CANCELADA' : opcoes.situacaoEspecial === 'Substituida' ? 'SUBSTITUÍDA' : null;
@@ -555,6 +586,9 @@ export async function desenharDanfse(dados: NfseLegivel, opcoes: OpcoesGerarDanf
     documento.fillColor('#000').restore();
   }
 
+  const incluirCanhoto = opcoes.incluirCanhoto ?? true;
+  const alturaCanhoto = ALTURA_FAIXA + 0.5 * MM + 2 * ALTURA_LINHA;
+
   let y = desenharCabecalho();
   y = await desenharIdentificacao(y);
   y = desenharPrestador(y);
@@ -566,7 +600,8 @@ export async function desenharDanfse(dados: NfseLegivel, opcoes: OpcoesGerarDanf
   y = desenharTributacaoFederal(y);
   y = desenharTributacaoIbscbs(y);
   y = desenharValorTotal(y);
-  desenharInformacoesComplementares(y);
+  y = desenharInformacoesComplementares(y, incluirCanhoto ? alturaCanhoto : 0);
+  if (incluirCanhoto) desenharCanhoto(y);
 
   documento.lineWidth(ESPESSURA_BORDA).strokeColor('#000').rect(margemEsq, margemSup, larguraUtil, alturaUtil).stroke();
   desenharMarcaDagua();

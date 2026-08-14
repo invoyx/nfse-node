@@ -16,7 +16,7 @@ Em desenvolvimento inicial. A tabela abaixo reflete o estado real de cada módul
 | `assinatura` | Assinatura XML (XMLDSig) | Feito |
 | `dps` | Tipos e serialização da DPS, incluindo o bloco IBSCBS (XML validado contra o XSD oficial) | Feito; grupo gReeRepRes (reembolso/repasse/ressarcimento de terceiros) ainda não |
 | `cliente` | Cliente HTTP mTLS para o SEFIN Nacional e o ADN (produção e homologação) | Feito |
-| `danfse` | Geração do DANFSe em PDF (NT 008/2026) | Feito; canhoto e dedução por documento ficam pra depois |
+| `danfse` | Geração do DANFSe em PDF (NT 008/2026), incluindo o Canhoto | Feito |
 
 ## Por que este projeto existe
 
