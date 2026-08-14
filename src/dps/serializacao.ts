@@ -212,8 +212,15 @@ function xmlImovel(imovel: ImovelIbscbs): string {
   throw new ErroValidacaoDps('IBSCBS.imovel precisa informar cCIB ou end.');
 }
 
+// RN 627 (SEFIN Nacional): o CST nunca e informado a parte, e sempre os 3
+// primeiros digitos do cClassTrib - derivar aqui evita gerar um par
+// CST/cClassTrib inconsistente.
+function derivarCstDoClassTrib(cClassTrib: string): string {
+  return cClassTrib.slice(0, 3);
+}
+
 function xmlTributacaoRegularIbscbs(reg: TributacaoRegularIbscbs): string {
-  return `<gTribRegular>${tag('CSTReg', reg.CSTReg)}${tag('cClassTribReg', reg.cClassTribReg)}</gTribRegular>`;
+  return `<gTribRegular>${tag('CSTReg', derivarCstDoClassTrib(reg.cClassTribReg))}${tag('cClassTribReg', reg.cClassTribReg)}</gTribRegular>`;
 }
 
 function xmlDiferimentoIbscbs(dif: DiferimentoIbscbs): string {
@@ -223,7 +230,7 @@ function xmlDiferimentoIbscbs(dif: DiferimentoIbscbs): string {
 function xmlSituacaoTributariaIbscbs(sit: SituacaoTributariaIbscbs): string {
   return (
     `<gIBSCBS>` +
-    tag('CST', sit.CST) +
+    tag('CST', derivarCstDoClassTrib(sit.cClassTrib)) +
     tag('cClassTrib', sit.cClassTrib) +
     tag('cCredPres', sit.cCredPres) +
     (sit.gTribRegular ? xmlTributacaoRegularIbscbs(sit.gTribRegular) : '') +
