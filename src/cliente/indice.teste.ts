@@ -204,3 +204,47 @@ test('consultarConvenio monta o caminho com o codigo do municipio', async () => 
     await fechar();
   }
 });
+
+// listarEventos vive no ADN (nao no SEFIN Nacional): a rota POST
+// /nfse/{chave}/eventos so serve pra registrar evento, GET nela devolve 405.
+// A leitura por chave e um endpoint separado do ADN Contribuinte.
+test('listarEventos busca no ADN, nao no SEFIN Nacional', async () => {
+  const { urlBase, fechar } = await subirServidorDeTeste((req, _corpo, res) => {
+    assert.equal(req.method, 'GET');
+    assert.equal(req.url, '/contribuintes/NFSe/' + '1'.repeat(50) + '/Eventos');
+    res.writeHead(200, { 'Content-Type': 'application/json' });
+    res.end(
+      JSON.stringify({
+        StatusProcessamento: 'DOCUMENTOS_LOCALIZADOS',
+        LoteDFe: [
+          {
+            NSU: 238,
+            ChaveAcesso: '1'.repeat(50),
+            TipoDocumento: 'EVENTO',
+            TipoEvento: 'CANCELAMENTO',
+            ArquivoXml: compactarGZipBase64('<evento>cancelamento</evento>'),
+            DataHoraGeracao: '2026-07-01T23:00:02.04',
+          },
+        ],
+        Alertas: [],
+        Erros: [],
+        TipoAmbiente: 'HOMOLOGACAO',
+        DataHoraProcessamento: '2026-07-01T23:01:00-03:00',
+      })
+    );
+  });
+
+  try {
+    const cliente = criarClienteSefin({
+      ambiente: 'homologacao',
+      certificado: clienteDeTeste,
+      urlBaseAdn: urlBase,
+      agenteOpcoes: { rejectUnauthorized: false },
+    });
+    const resultado = await cliente.listarEventos('1'.repeat(50));
+    assert.equal(resultado.documentos[0]?.tipoDocumento, 'EVENTO');
+    assert.equal(resultado.documentos[0]?.tipoEvento, 'CANCELAMENTO');
+  } finally {
+    await fechar();
+  }
+});

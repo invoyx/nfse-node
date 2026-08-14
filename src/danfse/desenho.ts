@@ -76,7 +76,13 @@ const ALTURA_FAIXA = 3.4 * MM;
 export type ResolvedorMunicipio = (codigoIbge: string) => { nome: string; uf: string } | undefined;
 
 export interface OpcoesGerarDanfse {
-  /** Aplica marca d'água diagonal, conforme NT 008/2026 §2.5. */
+  /**
+   * Aplica marca d'água diagonal, conforme NT 008/2026 §2.5. Precisa ser
+   * informado explicitamente porque cancelamento/substituição nunca ficam no
+   * XML da própria NFS-e (o `cStat` só tem códigos de geração) - são sempre
+   * um documento de EVENTO separado. Quem chama essa função é responsável
+   * por checar os eventos (`listarEventos`/`baixarDfe`) antes de decidir.
+   */
   situacaoEspecial?: 'Cancelada' | 'Substituida';
   resolverMunicipio?: ResolvedorMunicipio;
   /** PNG/JPEG da logomarca oficial da NFS-e (item 2.4.3). Sem isso, o cabeçalho usa só texto. */
