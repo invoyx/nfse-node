@@ -15,7 +15,7 @@ Em desenvolvimento inicial. A tabela abaixo reflete o estado real de cada módul
 | `certificado` | Leitura de certificado A1 (.pfx/.p12) | Feito |
 | `assinatura` | Assinatura XML (XMLDSig) | Feito |
 | `dps` | Tipos e serialização da DPS, incluindo o bloco IBSCBS (XML validado contra o XSD oficial) | Feito; grupo gReeRepRes (reembolso/repasse/ressarcimento de terceiros) ainda não |
-| `cliente` | Cliente HTTP mTLS para o SEFIN Nacional (produção e homologação) | Feito; endpoints do ADN (DFe, parametrização) ainda não |
+| `cliente` | Cliente HTTP mTLS para o SEFIN Nacional e o ADN (produção e homologação) | Feito |
 | `danfse` | Geração do DANFSe em PDF (NT 008/2026) | Feito; canhoto e dedução por documento ficam pra depois |
 
 ## Por que este projeto existe
@@ -32,6 +32,7 @@ O restante do SDK (certificado, assinatura, cliente HTTP) existe porque é pré-
 - [nfse-nacional/nfse-php](https://github.com/nfse-nacional/nfse-php): usado como referência de escopo e organização.
 - [Nota Técnica nº 008 (DANFSe)](https://www.gov.br/nfse/pt-br/biblioteca/documentacao-tecnica/rtc/nt-008-se-cgnfse-danfse-20260714-v1-02.pdf): especificação oficial usada como fonte do leiaute do DANFSe.
 - [Esquemas XSD da NFS-e Nacional](https://www.gov.br/nfse/pt-br/biblioteca/documentacao-tecnica/documentacao-atual/nfse-esquemas_xsd-v1-01-20260209.zip): baixados direto do gov.br e versionados em [`schemas/nfse/v1.01`](schemas/nfse/v1.01) - fonte de verdade dos tipos e da serialização da DPS, e usados nos testes pra validar o XML gerado contra o schema oficial.
+- Especificações OpenAPI do ADN (Ambiente de Dados Nacional) e do SEFIN Nacional: baixadas direto do gov.br e versionadas em [`schemas/adn/v1`](schemas/adn/v1) - fonte de verdade dos endpoints do módulo `cliente`.
 - [Liberation Sans](https://github.com/liberationfonts/liberation-fonts) e [DejaVu Sans](https://dejavu-fonts.github.io/): fontes livres embutidas no gerador de DANFSe (substitutas de Arial e Microsoft Sans Serif, que são proprietárias e não podem ser redistribuídas). Licenças em [`assets/fonts`](assets/fonts).
 
 ## Especificações
@@ -41,6 +42,7 @@ O restante do SDK (certificado, assinatura, cliente HTTP) existe porque é pré-
 
 - NFS-e Nacional - Esquemas XML v1.01 - [gov.br/nfse](https://www.gov.br/nfse/pt-br/biblioteca/documentacao-tecnica/documentacao-atual/nfse-esquemas_xsd-v1-01-20260209.zip)
 - DANFSe - Nota Técnica nº 008, versão 1.02 - [gov.br/nfse](https://www.gov.br/nfse/pt-br/biblioteca/documentacao-tecnica/rtc/nt-008-se-cgnfse-danfse-20260714-v1-02.pdf)
+- API do ADN (Contribuinte e Parâmetros Municipais) e do SEFIN Nacional - [gov.br/nfse](https://www.gov.br/nfse/pt-br/biblioteca/documentacao-tecnica/apis-prod-restrita-e-producao)
 - XML Signature (XMLDSig) - [W3C](https://www.w3.org/TR/xmldsig-core1/), conforme exigido pelo contrato da DPS
 
 </details>

@@ -1,0 +1,8 @@
+name: "Configuracao do CodeQL"
+
+# Arquivos de teste usam certificados autoassinados e chaves fracas de
+# proposito (servidor mTLS local, senhas de fixture) - padroes que disparariam
+# alertas de seguranca que nao se aplicam fora de teste. O codigo de producao
+# (fora de src/**/*.teste.ts) continua totalmente analisado.
+paths-ignore:
+  - '**/*.teste.ts'

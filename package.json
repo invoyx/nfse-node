@@ -58,6 +58,7 @@
   "files": [
     "dist",
     "schemas/**/*.xsd",
+    "schemas/**/*.json",
     "assets/fonts",
     "LICENSE",
     "NOTICE"

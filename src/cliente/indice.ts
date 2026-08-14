@@ -1,11 +1,21 @@
 import https from 'node:https';
-import { urlBaseSefin, type Ambiente } from './ambiente.js';
+import { urlBaseAdn, urlBaseSefin, type Ambiente } from './ambiente.js';
 import { compactarGZipBase64, descompactarGZipBase64 } from './compressao.js';
+import { normalizarConvenio, type ResultadoConsultaConvenio } from './convenio.js';
+import { normalizarLoteDistribuicao, type LoteDistribuicaoNsu } from './distribuicao.js';
 import { ErroComunicacaoSefin, type ErroSefin } from './erros.js';
 
-export { urlBaseSefin } from './ambiente.js';
+export { urlBaseAdn, urlBaseSefin } from './ambiente.js';
 export type { Ambiente } from './ambiente.js';
 export type { ErroSefin } from './erros.js';
+export type { ParametrosConvenio, ResultadoConsultaConvenio } from './convenio.js';
+export type {
+  DocumentoDistribuicao,
+  LoteDistribuicaoNsu,
+  MensagemProcessamentoAdn,
+  TipoDocumentoDistribuicao,
+  TipoEventoDistribuicao,
+} from './distribuicao.js';
 
 /** Par mínimo necessário para autenticação mTLS: as mesmas PEMs usadas em `assinatura`. */
 export interface ChaveClienteSefin {
@@ -19,11 +29,14 @@ export interface OpcoesClienteSefin {
   /** Tempo limite por requisição, em milissegundos. Padrão: 60000. */
   timeoutMs?: number;
   /**
-   * Substitui a URL base padrão do ambiente. Alguns municípios conveniados
-   * expõem o mesmo contrato de API em infraestrutura própria; também é o
-   * ponto usado pelos testes para apontar a um servidor local.
+   * Substitui a URL base padrão do ambiente para o SEFIN Nacional. Alguns
+   * municípios conveniados expõem o mesmo contrato de API em infraestrutura
+   * própria; também é o ponto usado pelos testes para apontar a um servidor
+   * local.
    */
   urlBase?: string;
+  /** Substitui a URL base padrão do ambiente para o ADN (distribuição de DFe e parametrização). */
+  urlBaseAdn?: string;
   /** Opções adicionais repassadas ao `https.Agent` (ex.: `ca`, `rejectUnauthorized` em testes). */
   agenteOpcoes?: https.AgentOptions;
 }
@@ -51,23 +64,37 @@ export interface ClienteSefin {
   registrarEvento(chaveAcesso: string, pedRegXmlAssinado: string): Promise<RespostaSefin>;
   /** GET /nfse/{chave}/eventos - lista os eventos registrados para a NFS-e. */
   listarEventos(chaveAcesso: string): Promise<RespostaSefin>;
+  /**
+   * GET /contribuintes/DFe/{nsu} no ADN - baixa o próximo lote de documentos
+   * fiscais (até 50) a partir do NSU informado. Use `0` para sincronizar
+   * desde o início; o NSU do último documento recebido para continuar depois.
+   */
+  baixarDfe(nsu: number, opcoes?: { cnpjConsulta?: string; lote?: boolean }): Promise<LoteDistribuicaoNsu>;
+  /** GET /parametrizacao/{codigoMunicipio}/convenio no ADN - parâmetros de convênio do município. */
+  consultarConvenio(codigoMunicipio: string | number): Promise<ResultadoConsultaConvenio>;
 }
 
-/** Cria um cliente HTTP autenticado por mTLS para o SEFIN Nacional. */
+/** Cria um cliente HTTP autenticado por mTLS para o SEFIN Nacional e o ADN. */
 export function criarClienteSefin(opcoes: OpcoesClienteSefin): ClienteSefin {
   const urlBase = opcoes.urlBase ?? urlBaseSefin(opcoes.ambiente);
+  const urlAdn = opcoes.urlBaseAdn ?? urlBaseAdn(opcoes.ambiente);
   const agente = new https.Agent({
     ...opcoes.agenteOpcoes,
     key: opcoes.certificado.chavePrivadaPem,
     cert: opcoes.certificado.certificadoPem,
   });
 
-  async function requisitar(metodo: 'GET' | 'POST', caminho: string, corpo?: unknown): Promise<RespostaSefin> {
+  async function requisitar(
+    metodo: 'GET' | 'POST',
+    urlBaseAlvo: string,
+    caminho: string,
+    corpo?: unknown
+  ): Promise<RespostaSefin> {
     const corpoSerializado = corpo === undefined ? undefined : JSON.stringify(corpo);
 
     return new Promise<RespostaSefin>((resolve, reject) => {
       const requisicao = https.request(
-        `${urlBase}/${caminho}`,
+        `${urlBaseAlvo}/${caminho}`,
         {
           method: metodo,
           agent: agente,
@@ -124,7 +151,7 @@ export function criarClienteSefin(opcoes: OpcoesClienteSefin): ClienteSefin {
 
   return {
     async emitirDps(dpsXmlAssinado) {
-      const { status, corpo } = await requisitar('POST', 'nfse', {
+      const { status, corpo } = await requisitar('POST', urlBase, 'nfse', {
         dpsXmlGZipB64: compactarGZipBase64(dpsXmlAssinado),
       });
       const objeto = corpo as Record<string, unknown>;
@@ -145,21 +172,36 @@ export function criarClienteSefin(opcoes: OpcoesClienteSefin): ClienteSefin {
     },
 
     consultarNfse(chaveAcesso) {
-      return requisitar('GET', `nfse/${chaveAcesso}`);
+      return requisitar('GET', urlBase, `nfse/${chaveAcesso}`);
     },
 
     consultarDps(idDps) {
-      return requisitar('GET', `dps/${idDps}`);
+      return requisitar('GET', urlBase, `dps/${idDps}`);
     },
 
     registrarEvento(chaveAcesso, pedRegXmlAssinado) {
-      return requisitar('POST', `nfse/${chaveAcesso}/eventos`, {
+      return requisitar('POST', urlBase, `nfse/${chaveAcesso}/eventos`, {
         pedRegXmlGZipB64: compactarGZipBase64(pedRegXmlAssinado),
       });
     },
 
     listarEventos(chaveAcesso) {
-      return requisitar('GET', `nfse/${chaveAcesso}/eventos`);
+      return requisitar('GET', urlBase, `nfse/${chaveAcesso}/eventos`);
+    },
+
+    async baixarDfe(nsu, opcoesConsulta) {
+      const parametros = new URLSearchParams();
+      if (opcoesConsulta?.cnpjConsulta) parametros.set('cnpjConsulta', opcoesConsulta.cnpjConsulta);
+      if (opcoesConsulta?.lote !== undefined) parametros.set('lote', String(opcoesConsulta.lote));
+      const query = parametros.size > 0 ? `?${parametros.toString()}` : '';
+
+      const { corpo } = await requisitar('GET', urlAdn, `contribuintes/DFe/${nsu}${query}`);
+      return normalizarLoteDistribuicao(corpo);
+    },
+
+    async consultarConvenio(codigoMunicipio) {
+      const { corpo } = await requisitar('GET', urlAdn, `parametrizacao/${codigoMunicipio}/convenio`);
+      return normalizarConvenio(corpo);
     },
   };
 }

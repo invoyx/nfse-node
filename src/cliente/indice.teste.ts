@@ -137,3 +137,70 @@ test('consultarNfse monta o caminho com a chave de acesso', async () => {
     await fechar();
   }
 });
+
+test('baixarDfe monta o caminho e a query string, e descompacta os XMLs do lote', async () => {
+  const { urlBase, fechar } = await subirServidorDeTeste((req, _corpo, res) => {
+    assert.equal(req.method, 'GET');
+    assert.equal(req.url, '/contribuintes/DFe/10?cnpjConsulta=12345678000199&lote=false');
+    res.writeHead(200, { 'Content-Type': 'application/json' });
+    res.end(
+      JSON.stringify({
+        StatusProcessamento: 'DOCUMENTOS_LOCALIZADOS',
+        LoteDFe: [
+          {
+            NSU: 11,
+            ChaveAcesso: '1'.repeat(50),
+            TipoDocumento: 'NFSE',
+            ArquivoXml: compactarGZipBase64('<NFSe>doc</NFSe>'),
+            DataHoraGeracao: '2026-06-15T10:30:00-03:00',
+          },
+        ],
+        Alertas: [],
+        Erros: [],
+        TipoAmbiente: 'HOMOLOGACAO',
+        DataHoraProcessamento: '2026-06-15T10:31:00-03:00',
+      })
+    );
+  });
+
+  try {
+    const cliente = criarClienteSefin({
+      ambiente: 'homologacao',
+      certificado: clienteDeTeste,
+      urlBaseAdn: urlBase,
+      agenteOpcoes: { rejectUnauthorized: false },
+    });
+    const resultado = await cliente.baixarDfe(10, { cnpjConsulta: '12345678000199', lote: false });
+    assert.equal(resultado.statusProcessamento, 'DOCUMENTOS_LOCALIZADOS');
+    assert.equal(resultado.documentos[0]?.xml, '<NFSe>doc</NFSe>');
+  } finally {
+    await fechar();
+  }
+});
+
+test('consultarConvenio monta o caminho com o codigo do municipio', async () => {
+  const { urlBase, fechar } = await subirServidorDeTeste((req, _corpo, res) => {
+    assert.equal(req.method, 'GET');
+    assert.equal(req.url, '/parametrizacao/3550308/convenio');
+    res.writeHead(200, { 'Content-Type': 'application/json' });
+    res.end(
+      JSON.stringify({
+        mensagem: null,
+        parametrosConvenio: { tipoConvenioDeserializationSetter: 1, aderenteAmbienteNacional: 1 },
+      })
+    );
+  });
+
+  try {
+    const cliente = criarClienteSefin({
+      ambiente: 'homologacao',
+      certificado: clienteDeTeste,
+      urlBaseAdn: urlBase,
+      agenteOpcoes: { rejectUnauthorized: false },
+    });
+    const resultado = await cliente.consultarConvenio('3550308');
+    assert.equal(resultado.parametros.tipoConvenio, 1);
+  } finally {
+    await fechar();
+  }
+});
