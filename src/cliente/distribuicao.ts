@@ -57,6 +57,15 @@ export interface LoteDistribuicaoNsu {
   ambiente: 'PRODUCAO' | 'HOMOLOGACAO';
   versaoAplicativo?: string;
   dataHoraProcessamento: string;
+  /**
+   * Cursor oficial de paginação, quando o ADN devolve esse campo. Pode ser
+   * maior que o maior NSU presente em `documentos` - o ADN às vezes consome
+   * um NSU sem entregar documento correspondente a ele. Prefira este campo
+   * (quando presente) em vez do maior NSU do lote pra continuar a
+   * sincronização; usar só o maior NSU do lote pode pular um NSU "consumido"
+   * e perder o documento seguinte silenciosamente.
+   */
+  ultimoNsu?: number;
 }
 
 function normalizarMensagens(lista: unknown): MensagemProcessamentoAdn[] {
@@ -90,5 +99,9 @@ export function normalizarLoteDistribuicao(corpo: unknown): LoteDistribuicaoNsu 
     ambiente: objeto.TipoAmbiente as 'PRODUCAO' | 'HOMOLOGACAO',
     versaoAplicativo: objeto.VersaoAplicativo as string | undefined,
     dataHoraProcessamento: objeto.DataHoraProcessamento as string,
+    // O campo nao aparece em toda resposta (so quando ha NSU consumido sem
+    // documento entregue) e a spec oficial nao documenta o nome com certeza -
+    // aceita as variacoes de casing ja observadas em uso real.
+    ultimoNsu: (objeto.UltimoNSU ?? objeto.ultimoNSU ?? objeto.UltNSU ?? objeto.ultNSU) as number | undefined,
   };
 }

@@ -55,3 +55,13 @@ test('lida com lote vazio (nenhum documento localizado)', () => {
   assert.equal(resultado.statusProcessamento, 'NENHUM_DOCUMENTO_LOCALIZADO');
   assert.deepEqual(resultado.documentos, []);
 });
+
+test('le ultimoNsu quando presente (cursor de paginacao, pode ser maior que o NSU dos documentos)', () => {
+  const resultado = normalizarLoteDistribuicao(loteExemplo({ UltimoNSU: 55 }));
+  assert.equal(resultado.ultimoNsu, 55);
+});
+
+test('ultimoNsu fica ausente quando a resposta nao traz o campo', () => {
+  const resultado = normalizarLoteDistribuicao(loteExemplo());
+  assert.equal(resultado.ultimoNsu, undefined);
+});

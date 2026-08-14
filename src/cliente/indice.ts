@@ -72,7 +72,10 @@ export interface ClienteSefin {
   /**
    * GET /contribuintes/DFe/{nsu} no ADN - baixa o próximo lote de documentos
    * fiscais (até 50) a partir do NSU informado. Use `0` para sincronizar
-   * desde o início; o NSU do último documento recebido para continuar depois.
+   * desde o início. Para continuar depois, prefira `resultado.ultimoNsu`
+   * (quando presente) em vez do maior NSU dos documentos recebidos - o ADN
+   * pode consumir um NSU sem entregar documento nenhum pra ele, e avançar só
+   * pelo maior NSU do lote pula esse NSU e perde o próximo documento.
    */
   baixarDfe(nsu: number, opcoes?: { cnpjConsulta?: string; lote?: boolean }): Promise<LoteDistribuicaoNsu>;
   /** GET /parametrizacao/{codigoMunicipio}/convenio no ADN - parâmetros de convênio do município. */
@@ -186,7 +189,7 @@ export function criarClienteSefin(opcoes: OpcoesClienteSefin): ClienteSefin {
 
     registrarEvento(chaveAcesso, pedRegXmlAssinado) {
       return requisitar('POST', urlBase, `nfse/${chaveAcesso}/eventos`, {
-        pedRegXmlGZipB64: compactarGZipBase64(pedRegXmlAssinado),
+        pedidoRegistroEventoXmlGZipB64: compactarGZipBase64(pedRegXmlAssinado),
       });
     },
 

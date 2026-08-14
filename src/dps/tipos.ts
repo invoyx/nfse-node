@@ -164,9 +164,7 @@ export interface ImovelIbscbs {
 }
 
 export interface TributacaoRegularIbscbs {
-  /** Código de Situação Tributária (CST) aplicável na tributação regular. */
-  CSTReg: string;
-  /** Código de Classificação Tributária aplicável na tributação regular. */
+  /** Código de Classificação Tributária aplicável na tributação regular. CSTReg é derivado (3 primeiros dígitos), não informado à parte. */
   cClassTribReg: string;
 }
 
@@ -177,8 +175,12 @@ export interface DiferimentoIbscbs {
 }
 
 export interface SituacaoTributariaIbscbs {
-  /** Código de Situação Tributária (CST) do IBS e da CBS. */
-  CST: string;
+  /**
+   * Código de Classificação Tributária do IBS e da CBS. O Código de Situação
+   * Tributária (CST) não é informado à parte: são sempre os 3 primeiros
+   * dígitos do cClassTrib (regra de negócio 627 do SEFIN Nacional) - o SDK
+   * deriva o CST daqui pra nunca gerar um par CST/cClassTrib inconsistente.
+   */
   cClassTrib: string;
   /** Código e classificação do crédito presumido (2 dígitos), quando aplicável. */
   cCredPres?: string;

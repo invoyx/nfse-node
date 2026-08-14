@@ -1,4 +1,4 @@
-import assert from 'node:assert/strict';
+﻿import assert from 'node:assert/strict';
 import { cpSync, mkdtempSync, readFileSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
@@ -132,10 +132,9 @@ test('monta um XML de DPS com bloco IBSCBS valido contra o XSD oficial', () => {
       ],
       trib: {
         gIBSCBS: {
-          CST: '000',
           cClassTrib: '000001',
           cCredPres: '01',
-          gTribRegular: { CSTReg: '000', cClassTribReg: '000001' },
+          gTribRegular: { cClassTribReg: '000001' },
           gDif: { pDifUF: 0, pDifMun: 0, pDifCBS: 0 },
         },
       },
@@ -148,6 +147,29 @@ test('monta um XML de DPS com bloco IBSCBS valido contra o XSD oficial', () => {
   assert.ok(valido, `XML nao passou no XSD oficial: ${doc.validationErrors.join('; ')}`);
 });
 
+test('deriva o CST a partir dos 3 primeiros digitos do cClassTrib (RN 627), nunca informado a parte', () => {
+  const dados = dadosDpsExemplo();
+  dados.IBSCBS = {
+    finNFSe: '0',
+    cIndOp: '000001',
+    indDest: '0',
+    valores: {
+      trib: {
+        gIBSCBS: {
+          cClassTrib: '123456',
+          gTribRegular: { cClassTribReg: '789012' },
+        },
+      },
+    },
+  };
+
+  const { xml } = montarXmlDps(dados);
+  assert.match(xml, /<CST>123<\/CST>/);
+  assert.match(xml, /<cClassTrib>123456<\/cClassTrib>/);
+  assert.match(xml, /<CSTReg>789<\/CSTReg>/);
+  assert.match(xml, /<cClassTribReg>789012<\/cClassTribReg>/);
+});
+
 test('rejeita IBSCBS.dest sem CNPJ, CPF, NIF ou cNaoNIF', () => {
   const dados = dadosDpsExemplo();
   dados.IBSCBS = {
@@ -156,7 +178,7 @@ test('rejeita IBSCBS.dest sem CNPJ, CPF, NIF ou cNaoNIF', () => {
     indDest: '1',
     // @ts-expect-error -- teste propositalmente nao informa nenhuma identificacao
     dest: { xNome: 'Destinatario Exemplo' },
-    valores: { trib: { gIBSCBS: { CST: '000', cClassTrib: '000001' } } },
+    valores: { trib: { gIBSCBS: { cClassTrib: '000001' } } },
   };
   assert.throws(() => montarXmlDps(dados), ErroValidacaoDps);
 });
@@ -168,7 +190,7 @@ test('rejeita IBSCBS.imovel sem cCIB nem end', () => {
     cIndOp: '000001',
     indDest: '0',
     imovel: {},
-    valores: { trib: { gIBSCBS: { CST: '000', cClassTrib: '000001' } } },
+    valores: { trib: { gIBSCBS: { cClassTrib: '000001' } } },
   };
   assert.throws(() => montarXmlDps(dados), ErroValidacaoDps);
 });
@@ -182,7 +204,7 @@ test('rejeita documento de gReeRepRes sem dFeNacional, docFiscalOutro ou docOutr
     valores: {
       // @ts-expect-error -- teste propositalmente nao informa nenhuma referencia de documento
       gReeRepRes: [{ dtEmiDoc: new Date(), dtCompDoc: new Date(), tpReeRepRes: '01', vlrReeRepRes: 10 }],
-      trib: { gIBSCBS: { CST: '000', cClassTrib: '000001' } },
+      trib: { gIBSCBS: { cClassTrib: '000001' } },
     },
   };
   assert.throws(() => montarXmlDps(dados), ErroValidacaoDps);
