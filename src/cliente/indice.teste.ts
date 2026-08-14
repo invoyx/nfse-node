@@ -40,6 +40,7 @@ function subirServidorDeTeste(
 ) {
   const servidor = gerarParChaveCertificado('localhost');
   const http = https.createServer(
+    // codeql[js/disabling-certificate-validation] servidor de teste local (127.0.0.1) com certificado autoassinado - nao valida cadeia de confiança de proposito, so confirma que o cliente apresenta certificado
     { key: servidor.chavePrivadaPem, cert: servidor.certificadoPem, requestCert: true, rejectUnauthorized: false },
     (req, res) => {
       const pedacos: Buffer[] = [];
@@ -80,6 +81,7 @@ test('emitirDps envia GZip/Base64 por mTLS e decodifica a NFS-e devolvida', asyn
       ambiente: 'homologacao',
       certificado: clienteDeTeste,
       urlBase,
+      // codeql[js/disabling-certificate-validation] aponta pro servidor de teste local com certificado autoassinado, nunca pra rede real
       agenteOpcoes: { rejectUnauthorized: false },
     });
     const resultado = await cliente.emitirDps('<DPS>conteudo de teste</DPS>');
@@ -102,6 +104,7 @@ test('propaga os erros do SEFIN Nacional em rejeicoes (HTTP 4xx/5xx)', async () 
       ambiente: 'homologacao',
       certificado: clienteDeTeste,
       urlBase,
+      // codeql[js/disabling-certificate-validation] aponta pro servidor de teste local com certificado autoassinado, nunca pra rede real
       agenteOpcoes: { rejectUnauthorized: false },
     });
     await assert.rejects(cliente.emitirDps('<DPS/>'), (erro: unknown) => {
@@ -129,6 +132,7 @@ test('consultarNfse monta o caminho com a chave de acesso', async () => {
       ambiente: 'homologacao',
       certificado: clienteDeTeste,
       urlBase,
+      // codeql[js/disabling-certificate-validation] aponta pro servidor de teste local com certificado autoassinado, nunca pra rede real
       agenteOpcoes: { rejectUnauthorized: false },
     });
     const resultado = await cliente.consultarNfse('12345678901234567890123456789012345678901234567890');
@@ -168,6 +172,7 @@ test('baixarDfe monta o caminho e a query string, e descompacta os XMLs do lote'
       ambiente: 'homologacao',
       certificado: clienteDeTeste,
       urlBaseAdn: urlBase,
+      // codeql[js/disabling-certificate-validation] aponta pro servidor de teste local com certificado autoassinado, nunca pra rede real
       agenteOpcoes: { rejectUnauthorized: false },
     });
     const resultado = await cliente.baixarDfe(10, { cnpjConsulta: '12345678000199', lote: false });
@@ -196,6 +201,7 @@ test('consultarConvenio monta o caminho com o codigo do municipio', async () => 
       ambiente: 'homologacao',
       certificado: clienteDeTeste,
       urlBaseAdn: urlBase,
+      // codeql[js/disabling-certificate-validation] aponta pro servidor de teste local com certificado autoassinado, nunca pra rede real
       agenteOpcoes: { rejectUnauthorized: false },
     });
     const resultado = await cliente.consultarConvenio('3550308');
