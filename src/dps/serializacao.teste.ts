@@ -112,6 +112,24 @@ test('monta um XML de DPS com bloco IBSCBS valido contra o XSD oficial', () => {
     },
     imovel: { cCIB: 'AB123456' },
     valores: {
+      gReeRepRes: [
+        {
+          dFeNacional: { tipoChaveDFe: '1', chaveDFe: '1'.repeat(50) },
+          fornec: { CNPJ: '11222333000181', xNome: 'Fornecedor Exemplo' },
+          dtEmiDoc: new Date('2026-06-01T00:00:00Z'),
+          dtCompDoc: new Date('2026-06-01T00:00:00Z'),
+          tpReeRepRes: '04',
+          vlrReeRepRes: 100,
+        },
+        {
+          docOutro: { nDoc: '123', xDoc: 'Recibo de despesa' },
+          dtEmiDoc: new Date('2026-06-02T00:00:00Z'),
+          dtCompDoc: new Date('2026-06-02T00:00:00Z'),
+          tpReeRepRes: '99',
+          xTpReeRepRes: 'Reembolso diverso',
+          vlrReeRepRes: 50,
+        },
+      ],
       trib: {
         gIBSCBS: {
           CST: '000',
@@ -151,6 +169,21 @@ test('rejeita IBSCBS.imovel sem cCIB nem end', () => {
     indDest: '0',
     imovel: {},
     valores: { trib: { gIBSCBS: { CST: '000', cClassTrib: '000001' } } },
+  };
+  assert.throws(() => montarXmlDps(dados), ErroValidacaoDps);
+});
+
+test('rejeita documento de gReeRepRes sem dFeNacional, docFiscalOutro ou docOutro', () => {
+  const dados = dadosDpsExemplo();
+  dados.IBSCBS = {
+    finNFSe: '0',
+    cIndOp: '000001',
+    indDest: '0',
+    valores: {
+      // @ts-expect-error -- teste propositalmente nao informa nenhuma referencia de documento
+      gReeRepRes: [{ dtEmiDoc: new Date(), dtCompDoc: new Date(), tpReeRepRes: '01', vlrReeRepRes: 10 }],
+      trib: { gIBSCBS: { CST: '000', cClassTrib: '000001' } },
+    },
   };
   assert.throws(() => montarXmlDps(dados), ErroValidacaoDps);
 });

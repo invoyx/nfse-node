@@ -14,7 +14,7 @@ Em desenvolvimento inicial. A tabela abaixo reflete o estado real de cada módul
 | --- | --- | --- |
 | `certificado` | Leitura de certificado A1 (.pfx/.p12) | Feito |
 | `assinatura` | Assinatura XML (XMLDSig) | Feito |
-| `dps` | Tipos e serialização da DPS, incluindo o bloco IBSCBS (XML validado contra o XSD oficial) | Feito; grupo gReeRepRes (reembolso/repasse/ressarcimento de terceiros) ainda não |
+| `dps` | Tipos e serialização da DPS, incluindo o bloco IBSCBS completo (XML validado contra o XSD oficial) | Feito |
 | `cliente` | Cliente HTTP mTLS para o SEFIN Nacional e o ADN (produção e homologação) | Feito |
 | `danfse` | Geração do DANFSe em PDF (NT 008/2026), incluindo o Canhoto | Feito |
 

@@ -6,8 +6,8 @@
 // (sem obra, evento, comercio exterior ou dedução por documentos), valores,
 // tributacao municipal e federal, e o bloco IBSCBS declarado pelo emitente
 // (TCRTCInfoIBSCBS: finalidade, destinatario, imovel, situacao/classificacao
-// tributaria, tributacao regular e diferimento). O grupo gReeRepRes (valores
-// de reembolso/repasse/ressarcimento de terceiros) ainda nao esta tipado.
+// tributaria, tributacao regular, diferimento e reembolso/repasse/ressarcimento
+// de terceiros via gReeRepRes).
 
 export type TipoAmbiente = '1' | '2';
 export type TipoEmitenteDps = '1' | '2' | '3';
@@ -186,7 +186,55 @@ export interface SituacaoTributariaIbscbs {
   gDif?: DiferimentoIbscbs;
 }
 
+export type TipoChaveDfe = '1' | '2' | '3' | '9';
+export type TipoReembolsoRepasseRessarcimento = '01' | '02' | '03' | '04' | '99';
+
+/** Documento fiscal eletrônico do Repositório Nacional (TCRTCListaDocDFe). */
+export interface DocumentoFiscalEletronicoReferenciado {
+  tipoChaveDFe: TipoChaveDfe;
+  /** Obrigatório apenas quando tipoChaveDFe = "9" (Outro). */
+  xTipoChaveDFe?: string;
+  chaveDFe: string;
+}
+
+/** Documento fiscal fora do Repositório Nacional (TCRTCListaDocFiscalOutro). */
+export interface DocumentoFiscalOutroReferenciado {
+  cMunDocFiscal: string;
+  nDocFiscal: string;
+  xDocFiscal: string;
+}
+
+/** Documento não fiscal (TCRTCListaDocOutro). */
+export interface DocumentoOutroReferenciado {
+  nDoc: string;
+  xDoc: string;
+}
+
+export interface FornecedorReeRepRes extends IdentificacaoDestinatarioIbscbs {
+  xNome: string;
+}
+
+/**
+ * Documento referenciado num reembolso, repasse ou ressarcimento de valores
+ * já tributados por terceiros (TCRTCListaDoc) - exige exatamente uma das três
+ * formas de identificar o documento.
+ */
+export interface DocumentoReeRepRes {
+  dFeNacional?: DocumentoFiscalEletronicoReferenciado;
+  docFiscalOutro?: DocumentoFiscalOutroReferenciado;
+  docOutro?: DocumentoOutroReferenciado;
+  fornec?: FornecedorReeRepRes;
+  dtEmiDoc: Date;
+  dtCompDoc: Date;
+  tpReeRepRes: TipoReembolsoRepasseRessarcimento;
+  /** Obrigatório apenas quando tpReeRepRes = "99" (Outros). */
+  xTpReeRepRes?: string;
+  vlrReeRepRes: number;
+}
+
 export interface ValoresIbscbs {
+  /** Documentos de reembolso/repasse/ressarcimento (gReeRepRes/documentos), até 1000 ocorrências. */
+  gReeRepRes?: DocumentoReeRepRes[];
   trib: {
     gIBSCBS: SituacaoTributariaIbscbs;
   };
