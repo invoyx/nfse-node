@@ -209,3 +209,66 @@ test('rejeita documento de gReeRepRes sem dFeNacional, docFiscalOutro ou docOutr
   };
   assert.throws(() => montarXmlDps(dados), ErroValidacaoDps);
 });
+
+// Confirmado contra o XSD oficial (tiposSimples_v1.01.xsd): a maioria dos
+// campos de texto livre (tipo TSString) rejeita quebra de linha - so
+// xDescServ (TSStringComQuebraDeLinha) e o xNome do prestador/tomador/
+// interm (TSNomeRazaoSocial, sem pattern) sao excecao. Sem validacao local,
+// a SEFIN Nacional recusaria a DPS inteira (E1235) so por causa desse
+// campo - visto na pratica com "informacoes complementares" em outro
+// sistema de emissao de NFS-e.
+test('rejeita quebra de linha em xLgr, xBairro, nro, xCpl e email (TSString)', () => {
+  const comLgr = dadosDpsExemplo();
+  comLgr.toma!.end = { endNac: { cMun: '3550308', CEP: '01001000' }, xLgr: 'Rua\nExemplo', nro: '100', xBairro: 'Centro' };
+  assert.throws(() => montarXmlDps(comLgr), ErroValidacaoDps);
+
+  const comBairro = dadosDpsExemplo();
+  comBairro.toma!.end = { endNac: { cMun: '3550308', CEP: '01001000' }, xLgr: 'Rua Exemplo', nro: '100', xBairro: 'Centro\nSul' };
+  assert.throws(() => montarXmlDps(comBairro), ErroValidacaoDps);
+
+  const comEmail = dadosDpsExemplo();
+  comEmail.prest.email = 'contato@exemplo.com\n';
+  assert.throws(() => montarXmlDps(comEmail), ErroValidacaoDps);
+});
+
+test('rejeita quebra de linha no xNome do IBSCBS.dest e no xDoc do gReeRepRes (TSDesc150/TSDesc255)', () => {
+  const comDest = dadosDpsExemplo();
+  comDest.IBSCBS = {
+    finNFSe: '0',
+    cIndOp: '000001',
+    indDest: '1',
+    dest: { CNPJ: '98765432000155', xNome: 'Destinatario\nExemplo' },
+    valores: { trib: { gIBSCBS: { cClassTrib: '000001' } } },
+  };
+  assert.throws(() => montarXmlDps(comDest), ErroValidacaoDps);
+
+  const comDoc = dadosDpsExemplo();
+  comDoc.IBSCBS = {
+    finNFSe: '0',
+    cIndOp: '000001',
+    indDest: '0',
+    valores: {
+      gReeRepRes: [
+        {
+          docOutro: { nDoc: '123', xDoc: 'Recibo\nde despesa' },
+          dtEmiDoc: new Date('2026-06-02T00:00:00Z'),
+          dtCompDoc: new Date('2026-06-02T00:00:00Z'),
+          tpReeRepRes: '99',
+          xTpReeRepRes: 'Reembolso diverso',
+          vlrReeRepRes: 50,
+        },
+      ],
+      trib: { gIBSCBS: { cClassTrib: '000001' } },
+    },
+  };
+  assert.throws(() => montarXmlDps(comDoc), ErroValidacaoDps);
+});
+
+test('permite quebra de linha em xDescServ e no xNome do prestador/tomador (schema nao restringe)', () => {
+  const dados = dadosDpsExemplo();
+  dados.serv.cServ.xDescServ = 'Desenvolvimento\nde software sob demanda';
+  dados.toma!.xNome = 'Cliente\nExemplo';
+  const { xml } = montarXmlDps(dados);
+  assert.match(xml, /<xDescServ>Desenvolvimento\nde software sob demanda<\/xDescServ>/);
+  assert.match(xml, /<xNome>Cliente\nExemplo<\/xNome>/);
+});

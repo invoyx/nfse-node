@@ -77,13 +77,13 @@ function xmlDocumentoFiscal(doc: { CNPJ?: string; CPF?: string }): string {
   throw new ErroValidacaoDps('É necessário informar CNPJ ou CPF.');
 }
 
-function xmlEndereco(end: Endereco): string {
+function xmlEndereco(end: Endereco, contexto: string): string {
   return (
     `<endNac>${tag('cMun', end.cMun)}${tag('CEP', end.CEP)}</endNac>` +
-    tag('xLgr', end.xLgr) +
-    tag('nro', end.nro) +
-    tag('xCpl', end.xCpl) +
-    tag('xBairro', end.xBairro)
+    tagSemQuebra('xLgr', end.xLgr, contexto) +
+    tagSemQuebra('nro', end.nro, contexto) +
+    tagSemQuebra('xCpl', end.xCpl, contexto) +
+    tagSemQuebra('xBairro', end.xBairro, contexto)
   );
 }
 
@@ -92,26 +92,26 @@ function xmlPrestador(prest: Prestador): string {
     xmlDocumentoFiscal(prest) +
     tag('IM', prest.IM) +
     tag('xNome', prest.xNome) +
-    (prest.end ? `<end>${xmlEndereco(prest.end)}</end>` : '') +
+    (prest.end ? `<end>${xmlEndereco(prest.end, 'prest.end')}</end>` : '') +
     tag('fone', prest.fone) +
-    tag('email', prest.email) +
+    tagSemQuebra('email', prest.email, 'prest') +
     `<regTrib>${tag('opSimpNac', prest.regTrib.opSimpNac)}${tag('regApTribSN', prest.regTrib.regApTribSN)}${tag('regEspTrib', prest.regTrib.regEspTrib)}</regTrib>`;
   return `<prest>${corpo}</prest>`;
 }
 
-function xmlPessoaConteudo(pessoa: Pessoa | DestinatarioIbscbs): string {
+function xmlPessoaConteudo(pessoa: Pessoa | DestinatarioIbscbs, contexto: string): string {
   return (
     xmlDocumentoFiscal(pessoa) +
     ('IM' in pessoa ? tag('IM', pessoa.IM) : '') +
     tag('xNome', pessoa.xNome) +
-    (pessoa.end ? `<end>${xmlEndereco(pessoa.end)}</end>` : '') +
+    (pessoa.end ? `<end>${xmlEndereco(pessoa.end, `${contexto}.end`)}</end>` : '') +
     tag('fone', pessoa.fone) +
-    tag('email', pessoa.email)
+    tagSemQuebra('email', pessoa.email, contexto)
   );
 }
 
 function xmlPessoa(elemento: 'toma' | 'interm', pessoa: Pessoa): string {
-  return `<${elemento}>${xmlPessoaConteudo(pessoa)}</${elemento}>`;
+  return `<${elemento}>${xmlPessoaConteudo(pessoa, elemento)}</${elemento}>`;
 }
 
 function xmlServico(serv: Servico): string {
@@ -179,10 +179,10 @@ function xmlDest(dest: DestinatarioIbscbs): string {
   return (
     `<dest>` +
     xmlIdentificacaoDest(dest, 'IBSCBS.dest') +
-    tag('xNome', dest.xNome) +
-    (dest.end ? `<end>${xmlEndereco(dest.end)}</end>` : '') +
+    tagSemQuebra('xNome', dest.xNome, 'IBSCBS.dest') +
+    (dest.end ? `<end>${xmlEndereco(dest.end, 'IBSCBS.dest.end')}</end>` : '') +
     tag('fone', dest.fone) +
-    tag('email', dest.email) +
+    tagSemQuebra('email', dest.email, 'IBSCBS.dest') +
     `</dest>`
   );
 }
@@ -197,7 +197,11 @@ function xmlEnderecoImovel(end: EnderecoImovel): string {
     throw new ErroValidacaoDps('IBSCBS.imovel.end precisa informar CEP ou endExt.');
   }
   return (
-    escolha + tag('xLgr', end.xLgr) + tag('nro', end.nro) + tag('xCpl', end.xCpl) + tag('xBairro', end.xBairro)
+    escolha +
+    tagSemQuebra('xLgr', end.xLgr, 'IBSCBS.imovel.end') +
+    tagSemQuebra('nro', end.nro, 'IBSCBS.imovel.end') +
+    tagSemQuebra('xCpl', end.xCpl, 'IBSCBS.imovel.end') +
+    tagSemQuebra('xBairro', end.xBairro, 'IBSCBS.imovel.end')
   );
 }
 
@@ -246,15 +250,18 @@ function xmlRefNFSe(refs: string[]): string {
 function xmlDocumentoReferenciadoReeRepRes(doc: DocumentoReeRepRes): string {
   if (doc.dFeNacional) {
     const d = doc.dFeNacional;
-    return `<dFeNacional>${tag('tipoChaveDFe', d.tipoChaveDFe)}${tag('xTipoChaveDFe', d.xTipoChaveDFe)}${tag('chaveDFe', d.chaveDFe)}</dFeNacional>`;
+    const contexto = 'IBSCBS.valores.gReeRepRes.dFeNacional';
+    return `<dFeNacional>${tag('tipoChaveDFe', d.tipoChaveDFe)}${tagSemQuebra('xTipoChaveDFe', d.xTipoChaveDFe, contexto)}${tag('chaveDFe', d.chaveDFe)}</dFeNacional>`;
   }
   if (doc.docFiscalOutro) {
     const d = doc.docFiscalOutro;
-    return `<docFiscalOutro>${tag('cMunDocFiscal', d.cMunDocFiscal)}${tag('nDocFiscal', d.nDocFiscal)}${tag('xDocFiscal', d.xDocFiscal)}</docFiscalOutro>`;
+    const contexto = 'IBSCBS.valores.gReeRepRes.docFiscalOutro';
+    return `<docFiscalOutro>${tag('cMunDocFiscal', d.cMunDocFiscal)}${tag('nDocFiscal', d.nDocFiscal)}${tagSemQuebra('xDocFiscal', d.xDocFiscal, contexto)}</docFiscalOutro>`;
   }
   if (doc.docOutro) {
     const d = doc.docOutro;
-    return `<docOutro>${tag('nDoc', d.nDoc)}${tag('xDoc', d.xDoc)}</docOutro>`;
+    const contexto = 'IBSCBS.valores.gReeRepRes.docOutro';
+    return `<docOutro>${tag('nDoc', d.nDoc)}${tagSemQuebra('xDoc', d.xDoc, contexto)}</docOutro>`;
   }
   throw new ErroValidacaoDps(
     'IBSCBS.valores.gReeRepRes: cada documento precisa informar dFeNacional, docFiscalOutro ou docOutro.'
@@ -262,7 +269,8 @@ function xmlDocumentoReferenciadoReeRepRes(doc: DocumentoReeRepRes): string {
 }
 
 function xmlFornecedorReeRepRes(fornec: FornecedorReeRepRes): string {
-  return `<fornec>${xmlIdentificacaoDest(fornec, 'IBSCBS.valores.gReeRepRes.fornec')}${tag('xNome', fornec.xNome)}</fornec>`;
+  const contexto = 'IBSCBS.valores.gReeRepRes.fornec';
+  return `<fornec>${xmlIdentificacaoDest(fornec, contexto)}${tagSemQuebra('xNome', fornec.xNome, contexto)}</fornec>`;
 }
 
 function xmlDocumentoReeRepRes(doc: DocumentoReeRepRes): string {
@@ -273,7 +281,7 @@ function xmlDocumentoReeRepRes(doc: DocumentoReeRepRes): string {
     tag('dtEmiDoc', formatarData(doc.dtEmiDoc)) +
     tag('dtCompDoc', formatarData(doc.dtCompDoc)) +
     tag('tpReeRepRes', doc.tpReeRepRes) +
-    tag('xTpReeRepRes', doc.xTpReeRepRes) +
+    tagSemQuebra('xTpReeRepRes', doc.xTpReeRepRes, 'IBSCBS.valores.gReeRepRes') +
     tagNum('vlrReeRepRes', doc.vlrReeRepRes) +
     `</documentos>`
   );
@@ -311,4 +319,23 @@ function tag(nome: string, valor: string | undefined): string {
 
 function tagNum(nome: string, valor: number | undefined): string {
   return valor === undefined ? '' : `<${nome}>${formatarDecimal(valor)}</${nome}>`;
+}
+
+// A maioria dos campos de texto livre do schema (tipo TSString em
+// tiposSimples_v1.01.xsd) rejeita quebra de linha, tabulacao ou qualquer
+// outro caractere de controle - confirmado validando contra o XSD oficial.
+// Submeter um deles faz a SEFIN Nacional recusar a DPS inteira (E1235) em
+// vez de so o valor problematico. xDescServ e a unica excecao conhecida
+// (tipo TSStringComQuebraDeLinha, permite quebra de linha de proposito) e
+// por isso continua usando tag() direto. Validar aqui da um erro local e
+// claro, em vez de deixar a rejeicao acontecer do lado do governo.
+function tagSemQuebra(nome: string, valor: string | undefined, contexto: string): string {
+  if (valor === undefined || valor === '') return '';
+  // eslint-disable-next-line no-control-regex
+  if (/[\x00-\x1f\x7f]/.test(valor)) {
+    throw new ErroValidacaoDps(
+      `${contexto}.${nome} nao pode conter quebra de linha, tabulacao ou outro caractere de controle.`
+    );
+  }
+  return tag(nome, valor);
 }
