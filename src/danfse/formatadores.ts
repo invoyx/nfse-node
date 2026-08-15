@@ -72,3 +72,19 @@ export function reticencias(texto: string | undefined, limite: number): string {
   const ultimoEspaco = cortado.lastIndexOf(' ');
   return (ultimoEspaco > 0 ? cortado.slice(0, ultimoEspaco) : cortado) + '...';
 }
+
+/**
+ * Normaliza texto vindo do XML antes de desenhar no PDF: CR/CRLF viram LF,
+ * tab vira espaço e outros caracteres de controle são removidos. Sem isso,
+ * um \r (retorno de carro) ou \t soltos no XML aparecem como glifo visível
+ * no DANFSe em vez de virar quebra de linha ou espaço - visto em descrições
+ * de serviço e informações complementares com texto colado de fora.
+ */
+export function limparTextoPdf(texto: string | undefined): string {
+  if (!texto) return '';
+  return texto
+    .replace(/\r\n?/g, '\n')
+    .replace(/\t/g, ' ')
+    // eslint-disable-next-line no-control-regex
+    .replace(/[\x00-\x08\x0b\x0c\x0e-\x1f]/g, '');
+}

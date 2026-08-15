@@ -33,6 +33,7 @@ import {
   formatarPercentual,
   formatarTelefone,
   juntar,
+  limparTextoPdf,
   reticencias,
   ufDoCodigoMunicipio,
 } from './formatadores.js';
@@ -117,7 +118,7 @@ export async function desenharDanfse(dados: NfseLegivel, opcoes: OpcoesGerarDanf
   // nesses tamanhos de fonte.
   const semLigadura = { liga: false } as unknown as PDFKit.Mixins.OpenTypeFeatures[];
   function escrever(texto: string, x: number, y: number, opcoes: PDFKit.Mixins.TextOptions = {}): void {
-    documento.text(texto, x, y, { ...opcoes, features: semLigadura });
+    documento.text(limparTextoPdf(texto), x, y, { ...opcoes, features: semLigadura });
   }
   function larguraDoTexto(texto: string): number {
     return documento.widthOfString(texto, { features: semLigadura });
@@ -417,7 +418,7 @@ export async function desenharDanfse(dados: NfseLegivel, opcoes: OpcoesGerarDanf
     const alturaLinha = tamanhoFonte * 1.15;
     const disponivel = margemSup + alturaUtil - alturaReservadaAposServico() - (y + 3.0 * MM);
     const maxLinhas = Math.max(Math.floor(disponivel / alturaLinha), 1);
-    let descricao = s.descricao;
+    let descricao = limparTextoPdf(s.descricao);
     const linhas = contarLinhas(descricao, bw - 1.6 * MM, tamanhoFonte);
     if (linhas > maxLinhas) {
       const aproximado = Math.floor((descricao.length * maxLinhas) / linhas) - 4;
